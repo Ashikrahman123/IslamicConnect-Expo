@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Islamic Community App</title>
+    <meta name="description" content="Islamic Community App for prayer times, Islamic calendar, and audio content">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Feather Icons -->
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    
+    <style>
+        :root {
+            --primary: #00ACC1;   /* Peaceful blue */
+            --secondary: #43A047; /* Forest green */
+            --background: #F5F7FA; /* Soft white */
+            --text: #2C3E50;      /* Deep blue-grey */
+            --accent: #FFB300;    /* Warm gold */
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+        }
+
+        /* RTL support */
+        .rtl {
+            direction: rtl;
+            text-align: right;
+        }
+
+        /* Prayer time indicator */
+        .prayer-time-active {
+            background-color: var(--accent);
+            color: white;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(255, 179, 0, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(255, 179, 0, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(255, 179, 0, 0);
+            }
+        }
+
+        /* Islamic pattern background */
+        .islamic-pattern {
+            background-color: var(--primary);
+            background-image: url("data:image/svg+xml,%3Csvg width='42' height='44' viewBox='0 0 42 44' xmlns='http://www.w3.org/2000/svg'%3E%3Cg id='Page-1' fill='none' fill-rule='evenodd'%3E%3Cg id='brick-wall' fill='%23ffffff' fill-opacity='0.1'%3E%3Cpath d='M0 0h42v44H0V0zm1 1h40v20H1V1zM0 23h20v20H0V23zm22 0h20v20H22V23z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--background);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+
+        /* Custom Tailwind Config */
+        /* This script will execute immediately */
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#00ACC1',
+                        secondary: '#43A047',
+                        background: '#F5F7FA',
+                        textColor: '#2C3E50',
+                        accent: '#FFB300',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    spacing: {
+                        '24': '24px',
+                    }
+                }
+            }
+        }
+    </style>
+    
+    <!-- Root div for React app -->
+    <div id="root"></div>
+    
+    <!-- Toast container for notifications -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50"></div>
+    
+    <!-- Scripts -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://unpkg.com/wouter/umd/index.js"></script>
+    <script src="https://unpkg.com/@tanstack/react-query@4/build/umd/index.production.js"></script>
+    <script src="https://unpkg.com/tone@14.7.77/build/Tone.js"></script>
+    <script>
+        // Create a simple placeholder App component
+        window.App = function() {
+            return React.createElement('div', { className: 'container mx-auto p-4' },
+                React.createElement('h1', { className: 'text-2xl font-bold text-primary mb-4' }, 'Islamic Community App'),
+                React.createElement('p', { className: 'mb-4' }, 'Welcome to the Islamic Community App. This application is currently under development.'),
+                React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' },
+                    React.createElement('div', { className: 'bg-white rounded-lg shadow p-4' },
+                        React.createElement('h2', { className: 'text-xl font-semibold mb-2 text-secondary' }, 'Prayer Times'),
+                        React.createElement('p', {}, 'Get accurate prayer times based on your location.')
+                    ),
+                    React.createElement('div', { className: 'bg-white rounded-lg shadow p-4' },
+                        React.createElement('h2', { className: 'text-xl font-semibold mb-2 text-secondary' }, 'Islamic Calendar'),
+                        React.createElement('p', {}, 'View Hijri calendar and important Islamic dates.')
+                    ),
+                    React.createElement('div', { className: 'bg-white rounded-lg shadow p-4' },
+                        React.createElement('h2', { className: 'text-xl font-semibold mb-2 text-secondary' }, 'Audio Content'),
+                        React.createElement('p', {}, 'Listen to Islamic lectures and Quran recitations.')
+                    )
+                )
+            );
+        };
+    </script>
+    <script type="text/babel">
+        // Simple placeholder rendering
+        ReactDOM.render(
+            React.createElement(App, null),
+            document.getElementById('root')
+        );
+
+        // Initialize Feather icons
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+        }
+    </script>
+</body>
+</html>

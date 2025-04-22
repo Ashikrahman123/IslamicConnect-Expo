@@ -1,0 +1,132 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base styles */
+:root {
+  --primary: #00ACC1;   /* Peaceful blue */
+  --secondary: #43A047; /* Forest green */
+  --background: #F5F7FA; /* Soft white */
+  --text: #2C3E50;      /* Deep blue-grey */
+  --accent: #FFB300;    /* Warm gold */
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background-color: var(--background);
+  color: var(--text);
+}
+
+body * {
+  @apply transition-colors duration-200;
+}
+
+/* RTL support for Arabic text */
+.rtl {
+  direction: rtl;
+  text-align: right;
+}
+
+/* Component styles */
+.card {
+  @apply bg-white rounded-lg shadow-md p-6 mb-6;
+}
+
+.islamic-pattern {
+  background-color: var(--primary);
+  background-image: url("data:image/svg+xml,%3Csvg width='42' height='44' viewBox='0 0 42 44' xmlns='http://www.w3.org/2000/svg'%3E%3Cg id='Page-1' fill='none' fill-rule='evenodd'%3E%3Cg id='brick-wall' fill='%23ffffff' fill-opacity='0.1'%3E%3Cpath d='M0 0h42v44H0V0zm1 1h40v20H1V1zM0 23h20v20H0V23zm22 0h20v20H22V23z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Button styles */
+.btn-primary {
+  @apply bg-[#00ACC1] hover:bg-[#0097A7] text-white font-medium py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-[#00ACC1] focus:ring-opacity-50;
+}
+
+.btn-secondary {
+  @apply bg-[#43A047] hover:bg-[#388E3C] text-white font-medium py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-[#43A047] focus:ring-opacity-50;
+}
+
+.btn-accent {
+  @apply bg-[#FFB300] hover:bg-[#FFA000] text-white font-medium py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-[#FFB300] focus:ring-opacity-50;
+}
+
+.btn-outline {
+  @apply border border-[#00ACC1] text-[#00ACC1] hover:bg-[#00ACC1] hover:text-white font-medium py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-[#00ACC1] focus:ring-opacity-50;
+}
+
+/* Prayer time styles */
+.prayer-time {
+  @apply p-4 rounded-lg mb-2 flex justify-between items-center bg-white;
+}
+
+.prayer-time-active {
+  @apply bg-[#FFB300] text-white;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 179, 0, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(255, 179, 0, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 179, 0, 0);
+  }
+}
+
+/* Form styles */
+.form-input {
+  @apply w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#00ACC1] focus:border-transparent;
+}
+
+.form-label {
+  @apply block text-sm font-medium text-gray-700 mb-1;
+}
+
+.form-error {
+  @apply text-red-500 text-sm mt-1;
+}
+
+/* Calendar styles */
+.calendar-day {
+  @apply w-10 h-10 flex items-center justify-center rounded-full mx-1;
+}
+
+.calendar-day-current {
+  @apply bg-[#00ACC1] text-white;
+}
+
+.calendar-day-event {
+  @apply border-2 border-[#FFB300];
+}
+
+/* Audio player styles */
+.audio-player {
+  @apply fixed bottom-0 left-0 right-0 bg-white shadow-lg p-4 z-10;
+}
+
+/* Islamic decorative style */
+.islamic-decoration {
+  position: relative;
+  overflow: hidden;
+}
+
+.islamic-decoration::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 12px;
+  background: 
+    radial-gradient(circle at 6px 6px, var(--primary) 2px, transparent 2px),
+    radial-gradient(circle at 18px 6px, var(--primary) 2px, transparent 2px),
+    radial-gradient(circle at 30px 6px, var(--primary) 2px, transparent 2px),
+    radial-gradient(circle at 42px 6px, var(--primary) 2px, transparent 2px);
+  background-size: 48px 12px;
+}
