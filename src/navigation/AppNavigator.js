@@ -1,157 +1,126 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
-import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 
-// Import screens
-import HomeScreen from '../screens/HomeScreen';
-import PrayerTimesScreen from '../screens/PrayerTimesScreen';
-import QuranScreen from '../screens/QuranScreen';
-import AudioLibraryScreen from '../screens/AudioLibraryScreen';
-import SurahDetailScreen from '../screens/SurahDetailScreen';
-import AudioPlayerScreen from '../screens/AudioPlayerScreen';
-import IslamicCalendarScreen from '../screens/IslamicCalendarScreen';
-import EventDetailScreen from '../screens/EventDetailScreen';
-import ProfileScreen from '../screens/ProfileScreen';
-import SettingsScreen from '../screens/SettingsScreen';
+// Screens
+import HomeScreen from '../screens/home/HomeScreen';
+import ProfileScreen from '../screens/profile/ProfileScreen';
 
-// Create navigators
+// Import other screens (to be created later)
+// import QuranScreen from '../screens/quran/QuranScreen';
+// import CalendarScreen from '../screens/calendar/CalendarScreen';
+// import AudioLibraryScreen from '../screens/audio/AudioLibraryScreen';
+
 const Tab = createBottomTabNavigator();
-const HomeStack = createStackNavigator();
-const QuranStack = createStackNavigator();
-const AudioStack = createStackNavigator();
-const CalendarStack = createStackNavigator();
-const ProfileStack = createStackNavigator();
+const Stack = createStackNavigator();
 
-// Home stack
-const HomeStackNavigator = () => {
-  return (
-    <HomeStack.Navigator>
-      <HomeStack.Screen 
-        name="HomeMain" 
-        component={HomeScreen} 
-        options={{ title: 'Home', headerShown: false }}
-      />
-      <HomeStack.Screen 
-        name="PrayerTimes" 
-        component={PrayerTimesScreen} 
-        options={{ title: 'Prayer Times' }}
-      />
-    </HomeStack.Navigator>
-  );
-};
+// Home Stack Navigator
+const HomeStack = () => (
+  <Stack.Navigator
+    screenOptions={{
+      headerShown: false,
+    }}
+  >
+    <Stack.Screen name="HomeScreen" component={HomeScreen} />
+    {/* Add other screens related to Home tab */}
+  </Stack.Navigator>
+);
 
-// Quran stack
-const QuranStackNavigator = () => {
-  return (
-    <QuranStack.Navigator>
-      <QuranStack.Screen 
-        name="QuranMain" 
-        component={QuranScreen} 
-        options={{ title: 'Quran', headerShown: false }}
-      />
-      <QuranStack.Screen 
-        name="SurahDetail" 
-        component={SurahDetailScreen} 
-        options={({ route }) => ({ title: route.params?.name || 'Surah' })}
-      />
-    </QuranStack.Navigator>
-  );
-};
+// Quran Stack Navigator
+const QuranStack = () => (
+  <Stack.Navigator
+    screenOptions={{
+      headerShown: false,
+    }}
+  >
+    {/* To be replaced with actual QuranScreen when created */}
+    <Stack.Screen name="QuranScreen" component={HomeScreen} />
+    {/* Add other screens related to Quran tab */}
+  </Stack.Navigator>
+);
 
-// Audio stack
-const AudioStackNavigator = () => {
-  return (
-    <AudioStack.Navigator>
-      <AudioStack.Screen 
-        name="AudioLibraryMain" 
-        component={AudioLibraryScreen} 
-        options={{ title: 'Audio Library', headerShown: false }}
-      />
-      <AudioStack.Screen 
-        name="AudioPlayer" 
-        component={AudioPlayerScreen} 
-        options={({ route }) => ({ title: route.params?.title || 'Now Playing' })}
-      />
-    </AudioStack.Navigator>
-  );
-};
+// Calendar Stack Navigator
+const CalendarStack = () => (
+  <Stack.Navigator
+    screenOptions={{
+      headerShown: false,
+    }}
+  >
+    {/* To be replaced with actual CalendarScreen when created */}
+    <Stack.Screen name="CalendarScreen" component={HomeScreen} />
+    {/* Add other screens related to Calendar tab */}
+  </Stack.Navigator>
+);
 
-// Calendar stack
-const CalendarStackNavigator = () => {
-  return (
-    <CalendarStack.Navigator>
-      <CalendarStack.Screen 
-        name="CalendarMain" 
-        component={IslamicCalendarScreen} 
-        options={{ title: 'Islamic Calendar', headerShown: false }}
-      />
-      <CalendarStack.Screen 
-        name="EventDetail" 
-        component={EventDetailScreen} 
-        options={({ route }) => ({ title: route.params?.title || 'Event' })}
-      />
-    </CalendarStack.Navigator>
-  );
-};
+// Audio Stack Navigator
+const AudioStack = () => (
+  <Stack.Navigator
+    screenOptions={{
+      headerShown: false,
+    }}
+  >
+    {/* To be replaced with actual AudioLibraryScreen when created */}
+    <Stack.Screen name="AudioLibraryScreen" component={HomeScreen} />
+    {/* Add other screens related to Audio tab */}
+  </Stack.Navigator>
+);
 
-// Profile stack
-const ProfileStackNavigator = () => {
-  return (
-    <ProfileStack.Navigator>
-      <ProfileStack.Screen 
-        name="ProfileMain" 
-        component={ProfileScreen} 
-        options={{ title: 'Profile', headerShown: false }}
-      />
-      <ProfileStack.Screen 
-        name="Settings" 
-        component={SettingsScreen} 
-        options={{ title: 'Settings' }}
-      />
-    </ProfileStack.Navigator>
-  );
-};
+// Profile Stack Navigator
+const ProfileStack = () => (
+  <Stack.Navigator
+    screenOptions={{
+      headerShown: false,
+    }}
+  >
+    <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
+    {/* Add other screens related to Profile tab */}
+  </Stack.Navigator>
+);
 
-// Main tab navigator
+// Main Tab Navigator
 const AppNavigator = () => {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarActiveTintColor: '#00ACC1',
+        tabBarInactiveTintColor: '#718096',
+        tabBarStyle: {
+          backgroundColor: '#FFFFFF',
+          borderTopColor: '#E2E8F0',
+          paddingBottom: 5,
+          paddingTop: 5,
+          height: 60,
+        },
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
-          let IconComponent = Ionicons;
 
           if (route.name === 'Home') {
             iconName = focused ? 'home' : 'home-outline';
           } else if (route.name === 'Quran') {
-            IconComponent = FontAwesome5;
-            iconName = 'quran';
-          } else if (route.name === 'Audio') {
-            iconName = focused ? 'headset' : 'headset-outline';
+            iconName = focused ? 'book' : 'book-outline';
           } else if (route.name === 'Calendar') {
             iconName = focused ? 'calendar' : 'calendar-outline';
+          } else if (route.name === 'Audio') {
+            iconName = focused ? 'headset' : 'headset-outline';
           } else if (route.name === 'Profile') {
             iconName = focused ? 'person' : 'person-outline';
           }
 
-          return <IconComponent name={iconName} size={size} color={color} />;
+          return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#00ACC1', // primary color
-        tabBarInactiveTintColor: '#2C3E50', // text color
-        tabBarStyle: {
-          height: 60,
-          paddingBottom: 10,
-          paddingTop: 10,
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '500',
         },
-        headerShown: false,
       })}
     >
-      <Tab.Screen name="Home" component={HomeStackNavigator} />
-      <Tab.Screen name="Quran" component={QuranStackNavigator} />
-      <Tab.Screen name="Audio" component={AudioStackNavigator} />
-      <Tab.Screen name="Calendar" component={CalendarStackNavigator} />
-      <Tab.Screen name="Profile" component={ProfileStackNavigator} />
+      <Tab.Screen name="Home" component={HomeStack} />
+      <Tab.Screen name="Quran" component={QuranStack} />
+      <Tab.Screen name="Calendar" component={CalendarStack} />
+      <Tab.Screen name="Audio" component={AudioStack} />
+      <Tab.Screen name="Profile" component={ProfileStack} />
     </Tab.Navigator>
   );
 };
