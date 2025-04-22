@@ -1,65 +1,90 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useRef } from 'react';
+import { Alert } from 'react-native';
 
-// Create the alert context
 export const AlertContext = createContext();
 
 export const AlertProvider = ({ children }) => {
-  const [alert, setAlert] = useState({ visible: false, type: 'success', message: '' });
+  const [alert, setAlert] = useState(null);
+  const timeoutRef = useRef(null);
 
-  // Show an alert
-  const showAlert = (type, message, duration = 3000) => {
-    setAlert({ visible: true, type, message });
+  const showAlert = (message, type = 'info', duration = 3000) => {
+    // Clear any existing timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
     
-    // Auto-hide the alert after the specified duration
-    setTimeout(() => {
-      setAlert(prev => ({ ...prev, visible: false }));
+    setAlert({ message, type });
+    
+    timeoutRef.current = setTimeout(() => {
+      setAlert(null);
     }, duration);
   };
 
-  // Hide the alert manually
   const hideAlert = () => {
-    setAlert(prev => ({ ...prev, visible: false }));
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    setAlert(null);
   };
 
-  // Success helper
-  const showSuccess = (message, duration) => {
-    showAlert('success', message, duration);
+  const showError = (message, duration = 3000) => {
+    showAlert(message, 'error', duration);
   };
 
-  // Error helper
-  const showError = (message, duration) => {
-    showAlert('error', message, duration);
+  const showSuccess = (message, duration = 3000) => {
+    showAlert(message, 'success', duration);
   };
 
-  // Info helper
-  const showInfo = (message, duration) => {
-    showAlert('info', message, duration);
+  const showInfo = (message, duration = 3000) => {
+    showAlert(message, 'info', duration);
   };
 
-  // Warning helper
-  const showWarning = (message, duration) => {
-    showAlert('warning', message, duration);
+  const showWarning = (message, duration = 3000) => {
+    showAlert(message, 'warning', duration);
   };
 
-  // Value object to be provided to consumers
-  const alertContext = {
-    alert,
-    showAlert,
-    hideAlert,
-    showSuccess,
-    showError,
-    showInfo,
-    showWarning
+  // For native alerts (blocking, with buttons)
+  const showNativeAlert = (title, message, buttons = [{ text: 'OK' }]) => {
+    Alert.alert(title, message, buttons);
+  };
+
+  const showConfirmation = (title, message, onConfirm, onCancel = () => {}) => {
+    Alert.alert(
+      title,
+      message,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: onCancel
+        },
+        {
+          text: 'Confirm',
+          onPress: onConfirm
+        }
+      ]
+    );
   };
 
   return (
-    <AlertContext.Provider value={alertContext}>
+    <AlertContext.Provider
+      value={{
+        alert,
+        showAlert,
+        hideAlert,
+        showError,
+        showSuccess,
+        showInfo,
+        showWarning,
+        showNativeAlert,
+        showConfirmation
+      }}
+    >
       {children}
     </AlertContext.Provider>
   );
 };
 
-// Custom hook to use the alert context
 export const useAlert = () => {
   const context = useContext(AlertContext);
   if (!context) {
