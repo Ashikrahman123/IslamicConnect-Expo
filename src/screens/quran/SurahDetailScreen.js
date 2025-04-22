@@ -3,144 +3,207 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   TouchableOpacity,
+  FlatList,
   ActivityIndicator,
-  ScrollView,
-  Animated,
-  Dimensions,
-  Platform
+  SafeAreaView,
+  Share,
+  Animated
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { getSurah, getSurahArabic, getSurahAudio } from '../../api/quran';
-
-const { width } = Dimensions.get('window');
+import AudioPlayer from '../../components/audio-player';
 
 const SurahDetailScreen = ({ route, navigation }) => {
-  const { surahNumber } = route.params;
+  const { surahNumber, verseNumber } = route.params;
   const [surah, setSurah] = useState(null);
-  const [surahArabic, setSurahArabic] = useState(null);
+  const [arabicText, setArabicText] = useState(null);
+  const [audioUrl, setAudioUrl] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [audioURL, setAudioURL] = useState(null);
-  const [isAudioLoading, setIsAudioLoading] = useState(false);
-  const [showTranslation, setShowTranslation] = useState(true);
-  const [fontSize, setFontSize] = useState(16);
-  
-  const scrollY = useRef(new Animated.Value(0)).current;
-  const headerHeight = scrollY.interpolate({
-    inputRange: [0, 80],
-    outputRange: [80, 50],
-    extrapolate: 'clamp',
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [bookmarkedVerses, setBookmarkedVerses] = useState([]);
+  const [settings, setSettings] = useState({
+    showTranslation: true,
+    fontSize: 'medium' // small, medium, large
   });
   
-  const headerOpacity = scrollY.interpolate({
-    inputRange: [0, 60, 90],
-    outputRange: [1, 0.3, 0],
-    extrapolate: 'clamp',
-  });
+  // Reference to scroll to a specific verse if provided
+  const flatListRef = useRef(null);
   
-  const titleOpacity = scrollY.interpolate({
-    inputRange: [0, 60, 90],
-    outputRange: [0, 0.7, 1],
-    extrapolate: 'clamp',
-  });
-
-  useEffect(() => {
-    fetchSurahData();
-  }, []);
-
-  const fetchSurahData = async () => {
+  const loadSurahData = async () => {
     try {
       setIsLoading(true);
       setError(null);
       
-      // Fetch surah in English translation
+      // Fetch surah data with translation
       const surahData = await getSurah(surahNumber);
       setSurah(surahData);
       
-      // Fetch surah in Arabic
+      // Fetch Arabic text
       const arabicData = await getSurahArabic(surahNumber);
-      setSurahArabic(arabicData);
+      setArabicText(arabicData);
       
+      // Fetch audio recitation
+      const audioData = await getSurahAudio(surahNumber);
+      if (audioData && audioData.audioUrl) {
+        setAudioUrl(audioData.audioUrl);
+      }
     } catch (err) {
-      console.error('Error fetching surah:', err);
-      setError('Could not load surah. Please try again.');
+      console.error('Error loading surah data:', err);
+      setError('Could not load surah data');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handlePlayAudio = async () => {
+  useEffect(() => {
+    loadSurahData();
+  }, [surahNumber]);
+
+  // Scroll to verse if verseNumber is provided
+  useEffect(() => {
+    if (verseNumber && surah && flatListRef.current) {
+      // Need to wait for the list to render
+      setTimeout(() => {
+        flatListRef.current.scrollToIndex({
+          index: verseNumber - 1,
+          animated: true,
+          viewPosition: 0
+        });
+      }, 500);
+    }
+  }, [verseNumber, surah]);
+
+  const toggleBookmark = (verse) => {
+    if (bookmarkedVerses.includes(verse)) {
+      setBookmarkedVerses(bookmarkedVerses.filter(v => v !== verse));
+    } else {
+      setBookmarkedVerses([...bookmarkedVerses, verse]);
+    }
+    
+    // In a real app, we would save bookmarks to AsyncStorage or backend
+  };
+
+  const handleShare = async (verse) => {
     try {
-      if (isPlaying) {
-        // Logic for stopping audio would go here
-        // For now, just toggle the state
-        setIsPlaying(false);
-        return;
-      }
-      
-      setIsAudioLoading(true);
-      
-      // Fetch audio URL
-      const audioData = await getSurahAudio(surahNumber);
-      setAudioURL(audioData.audioUrl);
-      
-      // Audio playing would be implemented here
-      // For now, just toggle the state
-      setIsPlaying(true);
-      
-    } catch (err) {
-      console.error('Error playing audio:', err);
-      setError('Could not play audio. Please try again.');
-    } finally {
-      setIsAudioLoading(false);
+      await Share.share({
+        message: `${verse.text}\n\n${verse.translation || ''}\n\nSurah ${surah.englishName} (${surahNumber}:${verse.number})`,
+        title: `Surah ${surah.englishName} Verse ${verse.number}`
+      });
+    } catch (error) {
+      console.error('Error sharing verse:', error);
     }
   };
 
-  const increaseFontSize = () => {
-    if (fontSize < 30) {
-      setFontSize(fontSize + 2);
-    }
-  };
-
-  const decreaseFontSize = () => {
-    if (fontSize > 12) {
-      setFontSize(fontSize - 2);
-    }
+  const toggleAudioPlayback = () => {
+    setIsPlayingAudio(!isPlayingAudio);
   };
 
   const toggleTranslation = () => {
-    setShowTranslation(!showTranslation);
+    setSettings({
+      ...settings,
+      showTranslation: !settings.showTranslation
+    });
   };
 
-  const renderVerse = ({ item }) => (
-    <View style={styles.verseContainer}>
+  const changeFontSize = () => {
+    const sizes = ['small', 'medium', 'large'];
+    const currentIndex = sizes.indexOf(settings.fontSize);
+    const nextIndex = (currentIndex + 1) % sizes.length;
+    setSettings({
+      ...settings,
+      fontSize: sizes[nextIndex]
+    });
+  };
+
+  // Get font size based on settings
+  const getArabicFontSize = () => {
+    switch (settings.fontSize) {
+      case 'small':
+        return 20;
+      case 'medium':
+        return 24;
+      case 'large':
+        return 28;
+      default:
+        return 24;
+    }
+  };
+
+  const getTranslationFontSize = () => {
+    switch (settings.fontSize) {
+      case 'small':
+        return 14;
+      case 'medium':
+        return 16;
+      case 'large':
+        return 18;
+      default:
+        return 16;
+    }
+  };
+
+  // Create merged data with Arabic and translation
+  const getMergedVerses = () => {
+    if (!surah || !arabicText) return [];
+    
+    return surah.ayahs.map((ayah, index) => {
+      const arabicVerse = arabicText.ayahs[index];
+      return {
+        number: ayah.numberInSurah,
+        text: arabicVerse ? arabicVerse.text : ayah.text,
+        translation: ayah.text,
+        juz: ayah.juz,
+        page: ayah.page
+      };
+    });
+  };
+
+  const renderVerseItem = ({ item }) => (
+    <View style={[
+      styles.verseContainer,
+      verseNumber === item.number && styles.highlightedVerse
+    ]}>
       <View style={styles.verseHeader}>
         <View style={styles.verseNumberContainer}>
-          <Text style={styles.verseNumber}>{item.numberInSurah}</Text>
+          <Text style={styles.verseNumber}>{item.number}</Text>
         </View>
-        <TouchableOpacity style={styles.verseAction}>
-          <Ionicons name="bookmark-outline" size={20} color="#718096" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.verseAction}>
-          <Ionicons name="share-social-outline" size={20} color="#718096" />
-        </TouchableOpacity>
+        
+        <View style={styles.verseActions}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => toggleBookmark(item.number)}
+          >
+            <Ionicons 
+              name={bookmarkedVerses.includes(item.number) ? "bookmark" : "bookmark-outline"} 
+              size={18} 
+              color={bookmarkedVerses.includes(item.number) ? "#43A047" : "#718096"} 
+            />
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => handleShare(item)}
+          >
+            <Ionicons name="share-social-outline" size={18} color="#718096" />
+          </TouchableOpacity>
+        </View>
       </View>
       
-      {/* Arabic text */}
-      {surahArabic && (
-        <Text style={[styles.arabicText, { fontSize: fontSize + 8 }]}>
-          {surahArabic.ayahs.find(a => a.numberInSurah === item.numberInSurah)?.text}
-        </Text>
-      )}
+      <Text style={[
+        styles.arabicText, 
+        { fontSize: getArabicFontSize() }
+      ]}>
+        {item.text}
+      </Text>
       
-      {/* English translation */}
-      {showTranslation && (
-        <Text style={[styles.translationText, { fontSize: fontSize }]}>
-          {item.text}
+      {settings.showTranslation && (
+        <Text style={[
+          styles.translationText,
+          { fontSize: getTranslationFontSize() }
+        ]}>
+          {item.translation}
         </Text>
       )}
     </View>
@@ -148,148 +211,108 @@ const SurahDetailScreen = ({ route, navigation }) => {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#00ACC1" />
-          <Text style={styles.loadingText}>Loading surah...</Text>
-        </View>
+      <SafeAreaView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#00ACC1" />
+        <Text style={styles.loadingText}>Loading Surah...</Text>
       </SafeAreaView>
     );
   }
 
   if (error) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="arrow-back" size={24} color="#00ACC1" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitleText}>Error</Text>
-          <View style={styles.placeholderButton} />
-        </View>
-        
-        <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle-outline" size={48} color="#FF6B6B" />
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity 
-            style={styles.retryButton}
-            onPress={fetchSurahData}
-          >
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
+      <SafeAreaView style={styles.errorContainer}>
+        <Ionicons name="alert-circle-outline" size={48} color="#FF6B6B" />
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity 
+          style={styles.retryButton}
+          onPress={loadSurahData}
+        >
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Animated Header */}
-      <Animated.View style={[styles.header, { height: headerHeight }]}>
+      <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="arrow-back" size={24} color="#00ACC1" />
+          <Ionicons name="arrow-back" size={24} color="#2C3E50" />
         </TouchableOpacity>
         
-        <Animated.View 
-          style={[
-            styles.headerTitleContainer, 
-            { opacity: titleOpacity }
-          ]}
-        >
-          <Text style={styles.headerTitleText}>
-            {surah?.englishName}
+        {surah && (
+          <Text style={styles.headerTitle}>
+            {surah.englishName} (سورة {surah.name})
           </Text>
-        </Animated.View>
+        )}
         
-        <TouchableOpacity 
-          style={styles.audioButton}
-          onPress={handlePlayAudio}
-          disabled={isAudioLoading}
-        >
-          {isAudioLoading ? (
-            <ActivityIndicator size="small" color="#00ACC1" />
-          ) : (
+        <View style={styles.headerActions}>
+          <TouchableOpacity 
+            style={styles.headerButton}
+            onPress={toggleTranslation}
+          >
             <Ionicons 
-              name={isPlaying ? "pause-circle-outline" : "play-circle-outline"} 
-              size={24} 
+              name={settings.showTranslation ? "language" : "language-outline"} 
+              size={22} 
               color="#00ACC1" 
             />
-          )}
-        </TouchableOpacity>
-      </Animated.View>
-      
-      {/* Surah Info Header */}
-      <Animated.View 
-        style={[
-          styles.surahInfoContainer,
-          { opacity: headerOpacity }
-        ]}
-      >
-        <View style={styles.surahInfo}>
-          <Text style={styles.surahName}>{surah?.englishName}</Text>
-          <Text style={styles.surahTranslation}>{surah?.englishNameTranslation}</Text>
-          <View style={styles.surahMetaInfo}>
-            <Text style={styles.surahMeta}>
-              {surah?.revelationType} • {surah?.numberOfAyahs} Verses
-            </Text>
-          </View>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.headerButton}
+            onPress={changeFontSize}
+          >
+            <Ionicons name="text" size={22} color="#00ACC1" />
+          </TouchableOpacity>
         </View>
-      </Animated.View>
-      
-      {/* Reading Options */}
-      <View style={styles.readingOptions}>
-        <TouchableOpacity 
-          style={styles.optionButton}
-          onPress={toggleTranslation}
-        >
-          <Ionicons 
-            name={showTranslation ? "language" : "language-outline"} 
-            size={22} 
-            color={showTranslation ? "#00ACC1" : "#718096"} 
-          />
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.optionButton}
-          onPress={decreaseFontSize}
-        >
-          <Ionicons name="remove-circle-outline" size={22} color="#718096" />
-        </TouchableOpacity>
-        
-        <Text style={styles.fontSizeText}>
-          {fontSize}
-        </Text>
-        
-        <TouchableOpacity 
-          style={styles.optionButton}
-          onPress={increaseFontSize}
-        >
-          <Ionicons name="add-circle-outline" size={22} color="#718096" />
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.optionButton}>
-          <Ionicons name="bookmark-outline" size={22} color="#718096" />
-        </TouchableOpacity>
       </View>
       
-      {/* Surah Content */}
-      <Animated.FlatList
-        data={surah?.ayahs}
-        renderItem={renderVerse}
+      {surah && (
+        <View style={styles.surahInfo}>
+          <Text style={styles.surahName}>
+            {surah.englishName} ({surah.number})
+          </Text>
+          <Text style={styles.surahDetails}>
+            {surah.englishNameTranslation} • {surah.revelationType} • {surah.ayahs.length} Verses
+          </Text>
+        </View>
+      )}
+      
+      {audioUrl && isPlayingAudio && (
+        <View style={styles.audioPlayerContainer}>
+          <AudioPlayer 
+            audioUrl={audioUrl}
+            title={surah?.englishName || 'Surah Recitation'}
+            subtitle={`Recited by Al-Afasy`}
+            compact={true}
+            onFinish={() => setIsPlayingAudio(false)}
+          />
+        </View>
+      )}
+      
+      <FlatList
+        ref={flatListRef}
+        data={getMergedVerses()}
+        renderItem={renderVerseItem}
         keyExtractor={(item) => item.number.toString()}
-        contentContainerStyle={styles.surahContent}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: false }
-        )}
-        scrollEventThrottle={16}
+        contentContainerStyle={styles.listContent}
+        onScrollToIndexFailed={(info) => {
+          console.warn('Failed to scroll to verse:', info);
+        }}
       />
+      
+      {audioUrl && !isPlayingAudio && (
+        <TouchableOpacity 
+          style={styles.floatingPlayButton}
+          onPress={toggleAudioPlayback}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="play" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+      )}
     </SafeAreaView>
   );
 };
@@ -303,6 +326,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#F5F7FA',
   },
   loadingText: {
     marginTop: 10,
@@ -314,6 +338,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    backgroundColor: '#F5F7FA',
   },
   errorText: {
     marginTop: 10,
@@ -334,132 +359,127 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
     paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
   },
   backButton: {
     padding: 8,
   },
-  headerTitleContainer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitleText: {
-    fontSize: 18,
+  headerTitle: {
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#2C3E50',
+    flex: 1,
+    textAlign: 'center',
   },
-  audioButton: {
+  headerActions: {
+    flexDirection: 'row',
+  },
+  headerButton: {
     padding: 8,
+    marginLeft: 4,
   },
-  placeholderButton: {
-    width: 40,
-  },
-  surahInfoContainer: {
+  surahInfo: {
     backgroundColor: '#FFFFFF',
-    padding: 20,
-    alignItems: 'center',
+    padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
   },
-  surahInfo: {
-    alignItems: 'center',
-  },
   surahName: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#2C3E50',
     marginBottom: 4,
   },
-  surahTranslation: {
-    fontSize: 16,
+  surahDetails: {
+    fontSize: 14,
     color: '#718096',
-    marginBottom: 8,
   },
-  surahMetaInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  surahMeta: {
-    fontSize: 14,
-    color: '#00ACC1',
-  },
-  readingOptions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-  },
-  optionButton: {
-    padding: 8,
-    marginHorizontal: 8,
-  },
-  fontSizeText: {
-    fontSize: 14,
-    color: '#2C3E50',
-    paddingHorizontal: 8,
-  },
-  surahContent: {
+  listContent: {
     padding: 16,
-    paddingBottom: 40,
   },
   verseContainer: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    marginBottom: 16,
+    borderRadius: 10,
     padding: 16,
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
   },
+  highlightedVerse: {
+    borderWidth: 2,
+    borderColor: '#00ACC1',
+  },
   verseHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
   },
   verseNumberContainer: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#00ACC1',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 'auto',
+    backgroundColor: '#F0F9FA',
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
   },
   verseNumber: {
-    color: '#FFFFFF',
+    fontSize: 14,
     fontWeight: 'bold',
-    fontSize: 12,
+    color: '#00ACC1',
   },
-  verseAction: {
+  verseActions: {
+    flexDirection: 'row',
+  },
+  actionButton: {
     padding: 6,
     marginLeft: 8,
   },
   arabicText: {
     fontSize: 24,
     color: '#2C3E50',
-    lineHeight: 42,
+    lineHeight: 36,
     textAlign: 'right',
-    writingDirection: 'rtl',
-    fontFamily: Platform.OS === 'ios' ? 'Geeza Pro' : 'sans-serif',
-    marginBottom: 16,
+    fontFamily: 'NotoNaskhArabic-Regular',
+    marginBottom: 12,
   },
   translationText: {
     fontSize: 16,
     color: '#718096',
     lineHeight: 24,
+  },
+  audioPlayerContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  floatingPlayButton: {
+    position: 'absolute',
+    right: 20,
+    bottom: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#00ACC1',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
 });
 

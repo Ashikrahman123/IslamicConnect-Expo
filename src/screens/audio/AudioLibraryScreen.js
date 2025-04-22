@@ -3,153 +3,118 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   TouchableOpacity,
-  TextInput,
+  ScrollView,
   ActivityIndicator,
-  RefreshControl,
-  Image
+  Image,
+  TextInput,
+  FlatList,
+  SafeAreaView
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { getAllAudioContent, getCategories } from '../../api/audioContent';
+import { 
+  getAllAudioContent,
+  getAudioContentByCategory,
+  getCategories,
+  searchAudioContent
+} from '../../api/audioContent';
 
 const AudioLibraryScreen = ({ navigation }) => {
-  const [audioContent, setAudioContent] = useState([]);
-  const [filteredContent, setFilteredContent] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [audioContent, setAudioContent] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const fetchAudioContent = async () => {
+  const loadAudioContent = async (category = 'all', query = '') => {
     try {
       setIsLoading(true);
       setError(null);
       
-      // Get all audio content
-      const content = await getAllAudioContent();
+      let content = [];
+      
+      if (query.trim().length > 0) {
+        // Search content
+        content = await searchAudioContent(query);
+      } else if (category === 'all') {
+        // Get all content
+        content = await getAllAudioContent();
+      } else {
+        // Get content by category
+        content = await getAudioContentByCategory(category);
+      }
+      
       setAudioContent(content);
-      setFilteredContent(content);
       
-      // Get categories
-      const categoryList = await getCategories();
-      setCategories(['All', ...categoryList]);
-      
+      // Load categories if not already loaded
+      if (categories.length === 0) {
+        const categoriesData = await getCategories();
+        setCategories(categoriesData);
+      }
     } catch (err) {
-      console.error('Error fetching audio content:', err);
-      setError('Could not load audio content. Please try again.');
+      console.error('Error loading audio content:', err);
+      setError('Could not load audio content');
     } finally {
       setIsLoading(false);
       setRefreshing(false);
     }
   };
 
+  // Initial data load
   useEffect(() => {
-    fetchAudioContent();
+    loadAudioContent();
   }, []);
 
-  const filterByCategory = (category) => {
+  // Handle category change
+  const handleCategoryChange = (category) => {
     setSelectedCategory(category);
-    
-    if (category === 'All') {
-      if (searchQuery) {
-        handleSearch(searchQuery);
-      } else {
-        setFilteredContent(audioContent);
-      }
-      return;
-    }
-    
-    const filtered = audioContent.filter(item => item.category === category);
-    
-    if (searchQuery) {
-      setFilteredContent(
-        filtered.filter(item => 
-          item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.speaker.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-      );
-    } else {
-      setFilteredContent(filtered);
-    }
+    setSearchQuery(''); // Clear search query when changing category
+    loadAudioContent(category);
   };
 
-  const handleSearch = (text) => {
-    setSearchQuery(text);
-    
-    if (text) {
-      const filtered = audioContent.filter(item => 
-        item.title.toLowerCase().includes(text.toLowerCase()) ||
-        item.speaker.toLowerCase().includes(text.toLowerCase())
-      );
-      
-      if (selectedCategory !== 'All') {
-        setFilteredContent(filtered.filter(item => item.category === selectedCategory));
-      } else {
-        setFilteredContent(filtered);
-      }
-    } else {
-      if (selectedCategory !== 'All') {
-        filterByCategory(selectedCategory);
-      } else {
-        setFilteredContent(audioContent);
-      }
-    }
+  // Handle search
+  const handleSearch = () => {
+    loadAudioContent(selectedCategory, searchQuery);
   };
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchAudioContent();
+  // Clear search
+  const clearSearch = () => {
+    setSearchQuery('');
+    loadAudioContent(selectedCategory);
   };
 
-  const navigateToAudioDetail = (audioId) => {
-    navigation.navigate('AudioDetail', { audioId });
-  };
-
-  const renderCategoryItem = ({ item }) => (
-    <TouchableOpacity
-      style={[
-        styles.categoryItem,
-        selectedCategory === item && styles.selectedCategoryItem
-      ]}
-      onPress={() => filterByCategory(item)}
-    >
-      <Text
-        style={[
-          styles.categoryText,
-          selectedCategory === item && styles.selectedCategoryText
-        ]}
-      >
-        {item}
-      </Text>
-    </TouchableOpacity>
-  );
-
+  // Render each audio item
   const renderAudioItem = ({ item }) => (
     <TouchableOpacity 
       style={styles.audioItem}
-      onPress={() => navigateToAudioDetail(item.id)}
+      onPress={() => navigation.navigate('AudioDetail', { audioId: item.id })}
     >
       <Image 
-        source={{ uri: item.thumbnail || 'https://via.placeholder.com/80' }}
+        source={{ uri: item.thumbnail || 'https://via.placeholder.com/80' }} 
         style={styles.audioThumbnail}
       />
-      
       <View style={styles.audioInfo}>
-        <Text style={styles.audioTitle} numberOfLines={2}>{item.title}</Text>
-        <Text style={styles.audioSpeaker}>{item.speaker}</Text>
+        <Text style={styles.audioTitle} numberOfLines={2}>
+          {item.title}
+        </Text>
+        <Text style={styles.audioSpeaker}>
+          {item.speaker}
+        </Text>
         <View style={styles.audioMeta}>
-          <Text style={styles.audioDuration}>{item.duration}</Text>
-          <Text style={styles.audioCategory}>{item.category}</Text>
+          <View style={styles.metaItem}>
+            <Ionicons name="time-outline" size={14} color="#718096" />
+            <Text style={styles.metaText}>{item.duration}</Text>
+          </View>
+          {item.category && (
+            <View style={styles.categoryBadge}>
+              <Text style={styles.categoryText}>{item.category}</Text>
+            </View>
+          )}
         </View>
       </View>
-      
-      <TouchableOpacity style={styles.playButton}>
-        <Ionicons name="play-circle" size={48} color="#00ACC1" />
-      </TouchableOpacity>
+      <Ionicons name="chevron-forward" size={20} color="#718096" />
     </TouchableOpacity>
   );
 
@@ -160,42 +125,73 @@ const AudioLibraryScreen = ({ navigation }) => {
       </View>
       
       <View style={styles.searchContainer}>
-        <Ionicons name="search-outline" size={20} color="#A0AEC0" style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search lectures, recitations..."
-          placeholderTextColor="#A0AEC0"
-          value={searchQuery}
-          onChangeText={handleSearch}
-          clearButtonMode="while-editing"
-        />
-        {searchQuery ? (
-          <TouchableOpacity
-            style={styles.clearButton}
-            onPress={() => handleSearch('')}
-          >
-            <Ionicons name="close-circle" size={20} color="#A0AEC0" />
-          </TouchableOpacity>
-        ) : null}
-      </View>
-      
-      {/* Categories horizontal list */}
-      <View style={styles.categoriesContainer}>
-        {isLoading && !refreshing ? (
-          <ActivityIndicator size="small" color="#00ACC1" style={styles.categoryLoader} />
-        ) : (
-          <FlatList
-            horizontal
-            data={categories}
-            renderItem={renderCategoryItem}
-            keyExtractor={(item) => item}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoriesList}
+        <View style={styles.searchInputContainer}>
+          <Ionicons name="search-outline" size={20} color="#718096" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search lectures, recitations..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onSubmitEditing={handleSearch}
+            returnKeyType="search"
           />
-        )}
+          {searchQuery.length > 0 && (
+            <TouchableOpacity 
+              onPress={clearSearch}
+              style={styles.clearButton}
+            >
+              <Ionicons name="close-circle" size={20} color="#718096" />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
       
-      {isLoading && !refreshing ? (
+      <View style={styles.categoriesContainer}>
+        <ScrollView 
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoriesScrollContent}
+        >
+          <TouchableOpacity
+            style={[
+              styles.categoryButton,
+              selectedCategory === 'all' && styles.selectedCategoryButton
+            ]}
+            onPress={() => handleCategoryChange('all')}
+          >
+            <Text 
+              style={[
+                styles.categoryButtonText,
+                selectedCategory === 'all' && styles.selectedCategoryButtonText
+              ]}
+            >
+              All
+            </Text>
+          </TouchableOpacity>
+          
+          {categories.map((category, index) => (
+            <TouchableOpacity
+              key={index}
+              style={[
+                styles.categoryButton,
+                selectedCategory === category && styles.selectedCategoryButton
+              ]}
+              onPress={() => handleCategoryChange(category)}
+            >
+              <Text 
+                style={[
+                  styles.categoryButtonText,
+                  selectedCategory === category && styles.selectedCategoryButtonText
+                ]}
+              >
+                {category}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+      
+      {isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#00ACC1" />
           <Text style={styles.loadingText}>Loading audio content...</Text>
@@ -204,35 +200,36 @@ const AudioLibraryScreen = ({ navigation }) => {
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle-outline" size={48} color="#FF6B6B" />
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.retryButton}
-            onPress={fetchAudioContent}
+            onPress={() => loadAudioContent(selectedCategory, searchQuery)}
           >
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <FlatList
-          data={filteredContent}
+          data={audioContent}
           renderItem={renderAudioItem}
-          keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={styles.audioList}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
+          keyExtractor={(item, index) => item.id?.toString() || index.toString()}
+          contentContainerStyle={styles.audioListContent}
+          showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Ionicons name="headset-outline" size={48} color="#A0AEC0" />
               <Text style={styles.emptyText}>
-                {searchQuery
-                  ? `No audio content found matching "${searchQuery}"`
-                  : selectedCategory !== 'All'
-                    ? `No audio content in ${selectedCategory} category`
-                    : 'No audio content available'
+                {searchQuery.length > 0 
+                  ? `No results found for "${searchQuery}"`
+                  : 'No audio content available'
                 }
               </Text>
             </View>
           }
+          onRefresh={() => {
+            setRefreshing(true);
+            loadAudioContent(selectedCategory, searchQuery);
+          }}
+          refreshing={refreshing}
         />
       )}
     </SafeAreaView>
@@ -245,12 +242,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F7FA',
   },
   header: {
-    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
     paddingVertical: 12,
-    paddingHorizontal: 16,
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
-    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,
@@ -258,58 +256,55 @@ const styles = StyleSheet.create({
     color: '#2C3E50',
   },
   searchContainer: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    margin: 16,
+    backgroundColor: '#F0F9FA',
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
     paddingHorizontal: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   searchIcon: {
     marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    height: 48,
+    paddingVertical: 10,
+    fontSize: 16,
     color: '#2C3E50',
   },
   clearButton: {
-    padding: 8,
+    padding: 4,
   },
   categoriesContainer: {
+    backgroundColor: '#FFFFFF',
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
   },
-  categoriesList: {
+  categoriesScrollContent: {
     paddingHorizontal: 16,
   },
-  categoryLoader: {
-    marginHorizontal: 16,
-  },
-  categoryItem: {
+  categoryButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
+    backgroundColor: '#F0F9FA',
     borderRadius: 20,
-    backgroundColor: '#F1F5F9',
-    marginRight: 8,
+    marginRight: 10,
   },
-  selectedCategoryItem: {
+  selectedCategoryButton: {
     backgroundColor: '#00ACC1',
   },
-  categoryText: {
-    color: '#64748B',
-    fontWeight: '500',
+  categoryButtonText: {
+    fontSize: 14,
+    color: '#2C3E50',
   },
-  selectedCategoryText: {
+  selectedCategoryButtonText: {
     color: '#FFFFFF',
     fontWeight: 'bold',
   },
@@ -317,6 +312,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#F5F7FA',
   },
   loadingText: {
     marginTop: 10,
@@ -346,22 +342,21 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: 'bold',
   },
-  audioList: {
+  audioListContent: {
     padding: 16,
-    paddingBottom: 20,
   },
   audioItem: {
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    marginBottom: 12,
+    borderRadius: 10,
     padding: 12,
+    marginBottom: 12,
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
-    alignItems: 'center',
   },
   audioThumbnail: {
     width: 80,
@@ -371,51 +366,56 @@ const styles = StyleSheet.create({
   },
   audioInfo: {
     flex: 1,
-    marginHorizontal: 12,
+    marginLeft: 12,
+    marginRight: 8,
   },
   audioTitle: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#2C3E50',
     marginBottom: 4,
-    lineHeight: 22,
   },
   audioSpeaker: {
     fontSize: 14,
-    color: '#00ACC1',
+    color: '#718096',
     marginBottom: 8,
   },
   audioMeta: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
   },
-  audioDuration: {
-    fontSize: 12,
-    color: '#64748B',
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginRight: 12,
   },
-  audioCategory: {
+  metaText: {
     fontSize: 12,
-    color: '#64748B',
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
+    color: '#718096',
+    marginLeft: 4,
   },
-  playButton: {
-    padding: 4,
+  categoryBadge: {
+    backgroundColor: '#E0F7FA',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  categoryText: {
+    fontSize: 11,
+    color: '#00ACC1',
+    fontWeight: 'bold',
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 50,
+    paddingVertical: 30,
   },
   emptyText: {
-    marginTop: 10,
-    color: '#64748B',
     fontSize: 16,
+    color: '#718096',
     textAlign: 'center',
-    maxWidth: '80%',
+    marginTop: 16,
   },
 });
 
