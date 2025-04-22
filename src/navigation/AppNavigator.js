@@ -6,10 +6,11 @@ import { Ionicons } from '@expo/vector-icons';
 // Screens
 import HomeScreen from '../screens/home/HomeScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
+import QuranScreen from '../screens/quran/QuranScreen';
+import SurahDetailScreen from '../screens/quran/SurahDetailScreen';
+import CalendarScreen from '../screens/calendar/CalendarScreen';
 
-// Import other screens (to be created later)
-// import QuranScreen from '../screens/quran/QuranScreen';
-// import CalendarScreen from '../screens/calendar/CalendarScreen';
+// Import other screens (to be added later)
 // import AudioLibraryScreen from '../screens/audio/AudioLibraryScreen';
 
 const Tab = createBottomTabNavigator();
@@ -34,8 +35,8 @@ const QuranStack = () => (
       headerShown: false,
     }}
   >
-    {/* To be replaced with actual QuranScreen when created */}
-    <Stack.Screen name="QuranScreen" component={HomeScreen} />
+    <Stack.Screen name="QuranScreen" component={QuranScreen} />
+    <Stack.Screen name="SurahDetail" component={SurahDetailScreen} />
     {/* Add other screens related to Quran tab */}
   </Stack.Navigator>
 );
@@ -47,8 +48,7 @@ const CalendarStack = () => (
       headerShown: false,
     }}
   >
-    {/* To be replaced with actual CalendarScreen when created */}
-    <Stack.Screen name="CalendarScreen" component={HomeScreen} />
+    <Stack.Screen name="CalendarScreen" component={CalendarScreen} />
     {/* Add other screens related to Calendar tab */}
   </Stack.Navigator>
 );
