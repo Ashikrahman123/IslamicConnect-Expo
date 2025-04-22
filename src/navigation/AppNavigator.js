@@ -10,8 +10,9 @@ import QuranScreen from '../screens/quran/QuranScreen';
 import SurahDetailScreen from '../screens/quran/SurahDetailScreen';
 import CalendarScreen from '../screens/calendar/CalendarScreen';
 
-// Import other screens (to be added later)
-// import AudioLibraryScreen from '../screens/audio/AudioLibraryScreen';
+// Import audio screens
+import AudioLibraryScreen from '../screens/audio/AudioLibraryScreen';
+import AudioDetailScreen from '../screens/audio/AudioDetailScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -60,8 +61,8 @@ const AudioStack = () => (
       headerShown: false,
     }}
   >
-    {/* To be replaced with actual AudioLibraryScreen when created */}
-    <Stack.Screen name="AudioLibraryScreen" component={HomeScreen} />
+    <Stack.Screen name="AudioLibraryScreen" component={AudioLibraryScreen} />
+    <Stack.Screen name="AudioDetail" component={AudioDetailScreen} />
     {/* Add other screens related to Audio tab */}
   </Stack.Navigator>
 );

@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { getCurrentHijriDate } from '../../api/islamicCalendar';
-import { getPrayerTimes } from '../../api/prayerTimes';
+import PrayerTimesWidget from '../../components/PrayerTimesWidget';
 import { getFeaturedAudioContent } from '../../api/audioContent';
 
 const HomeScreen = ({ navigation }) => {
@@ -34,13 +34,7 @@ const HomeScreen = ({ navigation }) => {
       const hijriDateData = await getCurrentHijriDate();
       setHijriDate(hijriDateData);
       
-      // Get prayer times (hardcoded coordinates for demo - would use device location in real app)
-      const todayPrayerTimes = await getPrayerTimes(
-        new Date(),
-        37.7749, // San Francisco latitude 
-        -122.4194 // San Francisco longitude
-      );
-      setPrayerTimes(todayPrayerTimes);
+      // We no longer need to fetch prayer times directly here since the PrayerTimesWidget will handle it
       
       // Get featured audio content
       const audioContent = await getFeaturedAudioContent(3);
