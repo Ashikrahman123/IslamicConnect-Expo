@@ -1,165 +1,39 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
-  FlatList,
-  ActivityIndicator,
   ScrollView,
-  RefreshControl
+  TouchableOpacity,
+  Modal,
+  SafeAreaView
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { getHijriCalendar, getCurrentHijriDate, getIslamicSpecialDays } from '../../api/islamicCalendar';
+import IslamicCalendar from '../../components/islamic-calendar';
 
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MONTHS = [
-  'Muharram', 'Safar', 'Rabi al-Awwal', 'Rabi al-Thani',
-  'Jumada al-Awwal', 'Jumada al-Thani', 'Rajab', 'Shaban',
-  'Ramadan', 'Shawwal', 'Dhu al-Qadah', 'Dhu al-Hijjah'
-];
+const CalendarScreen = ({ navigation }) => {
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
 
-const CalendarScreen = () => {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [hijriYear, setHijriYear] = useState(null);
-  const [hijriMonth, setHijriMonth] = useState(null);
-  const [calendarDays, setCalendarDays] = useState([]);
-  const [specialEvents, setSpecialEvents] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState(null);
-
-  const fetchCalendarData = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      // First get current Hijri date
-      const currentHijriDate = await getCurrentHijriDate();
-      const currentHijriYear = parseInt(currentHijriDate.hijri.year);
-      const currentHijriMonth = parseInt(currentHijriDate.hijri.month.number);
-      
-      setHijriYear(currentHijriYear);
-      setHijriMonth(currentHijriMonth);
-      
-      // Get calendar for current month
-      await fetchMonthCalendar(currentHijriYear, currentHijriMonth);
-      
-      // Get special Islamic events for the year
-      const events = getIslamicSpecialDays(currentHijriYear);
-      setSpecialEvents(events);
-      
-    } catch (err) {
-      console.error('Error fetching calendar data:', err);
-      setError('Could not load calendar data. Please try again.');
-    } finally {
-      setIsLoading(false);
-      setRefreshing(false);
-    }
+  const handleEventPress = (event) => {
+    setSelectedEvent(event);
+    setModalVisible(true);
   };
 
-  const fetchMonthCalendar = async (year, month) => {
-    try {
-      // Get Hijri calendar for a specific month
-      const calendarData = await getHijriCalendar(year, month);
-      
-      if (calendarData && Array.isArray(calendarData)) {
-        // Format data for calendar grid
-        const daysInMonth = calendarData.map(day => ({
-          date: day.hijri.day,
-          gregorianDate: day.gregorian.date,
-          weekday: new Date(day.gregorian.date).getDay(),
-          isToday: day.hijri.date === calendarData.find(d => d.hijri.date === day.date)?.hijri.date
-        }));
-        
-        // Add empty slots for days before first day of month
-        const firstDayOfMonth = daysInMonth[0].weekday;
-        const emptyDaysBefore = Array(firstDayOfMonth).fill(null).map((_, i) => ({ isEmpty: true, id: `empty-before-${i}` }));
-        
-        // Combine empty slots and actual days
-        setCalendarDays([...emptyDaysBefore, ...daysInMonth]);
-      }
-    } catch (err) {
-      console.error('Error fetching month calendar:', err);
-      throw err;
-    }
-  };
+  // Get event description based on event name
+  const getEventDescription = (eventName) => {
+    const eventDescriptions = {
+      'Islamic New Year': 'Islamic New Year marks the beginning of the Islamic lunar calendar. It commemorates the Hijra, the migration of Prophet Muhammad ﷺ from Mecca to Medina.',
+      'Day of Ashura': 'The Day of Ashura is the 10th day of Muharram. It commemorates the day when Allah saved Prophet Musa (Moses) and the Children of Israel from Pharaoh.',
+      'Mawlid al-Nabi': 'Mawlid al-Nabi commemorates the birthday of Prophet Muhammad ﷺ. Muslims celebrate by reciting poetry, singing nasheeds, and gathering for communal meals.',
+      'Start of Ramadan': 'Ramadan is the ninth month of the Islamic calendar, observed by Muslims worldwide as a month of fasting, prayer, reflection, and community.',
+      'Laylat al-Qadr': 'Laylat al-Qadr (The Night of Power) is one of the odd-numbered nights during the last ten days of Ramadan. It commemorates the night when the Quran was first revealed to Prophet Muhammad ﷺ.',
+      'Eid al-Fitr': 'Eid al-Fitr marks the end of Ramadan, the Islamic holy month of fasting. It is celebrated with prayers, family gatherings, and charitable giving.',
+      'Day of Arafah': 'The Day of Arafah falls on the 9th day of Dhu al-Hijjah. It is the day when pilgrims performing Hajj gather at the plain of Arafah. For non-pilgrims, it is recommended to fast on this day.',
+      'Eid al-Adha': 'Eid al-Adha (Festival of Sacrifice) commemorates Prophet Ibrahim\'s willingness to sacrifice his son as an act of obedience to Allah. It is celebrated at the end of the Hajj pilgrimage.',
+    };
 
-  useEffect(() => {
-    fetchCalendarData();
-  }, []);
-
-  const changeMonth = async (increment) => {
-    let newMonth = hijriMonth + increment;
-    let newYear = hijriYear;
-    
-    if (newMonth > 12) {
-      newMonth = 1;
-      newYear += 1;
-    } else if (newMonth < 1) {
-      newMonth = 12;
-      newYear -= 1;
-    }
-    
-    setHijriYear(newYear);
-    setHijriMonth(newMonth);
-    
-    try {
-      setIsLoading(true);
-      await fetchMonthCalendar(newYear, newMonth);
-      
-      // Update special events if year changes
-      if (newYear !== hijriYear) {
-        const events = getIslamicSpecialDays(newYear);
-        setSpecialEvents(events);
-      }
-    } catch (err) {
-      setError('Could not change month. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchCalendarData();
-  };
-
-  // Find special events for the current month
-  const currentMonthEvents = specialEvents.filter(event => event.month === hijriMonth);
-
-  // Render calendar day
-  const renderDay = ({ item, index }) => {
-    if (item.isEmpty) {
-      return <View style={styles.emptyDay} />;
-    }
-    
-    // Check if this day has a special event
-    const hasEvent = currentMonthEvents.some(event => parseInt(event.day) === parseInt(item.date));
-    
-    return (
-      <TouchableOpacity 
-        style={[
-          styles.dayContainer,
-          item.isToday && styles.todayContainer,
-          hasEvent && styles.eventDayContainer
-        ]}
-      >
-        <Text 
-          style={[
-            styles.dayText,
-            item.isToday && styles.todayText,
-            hasEvent && styles.eventDayText
-          ]}
-        >
-          {item.date}
-        </Text>
-        {hasEvent && (
-          <View style={styles.eventIndicator} />
-        )}
-      </TouchableOpacity>
-    );
+    return eventDescriptions[eventName] || 'A significant day in the Islamic calendar.';
   };
 
   return (
@@ -167,108 +41,92 @@ const CalendarScreen = () => {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Islamic Calendar</Text>
       </View>
-      
-      <ScrollView
-        style={styles.scrollView}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {isLoading && !refreshing ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#00ACC1" />
-            <Text style={styles.loadingText}>Loading calendar...</Text>
-          </View>
-        ) : error ? (
-          <View style={styles.errorContainer}>
-            <Ionicons name="alert-circle-outline" size={48} color="#FF6B6B" />
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity 
-              style={styles.retryButton}
-              onPress={fetchCalendarData}
-            >
-              <Text style={styles.retryButtonText}>Retry</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.calendarContainer}>
-            {/* Month Header */}
-            <View style={styles.monthHeader}>
-              <TouchableOpacity 
-                style={styles.monthChangeButton}
-                onPress={() => changeMonth(-1)}
-              >
-                <Ionicons name="chevron-back" size={24} color="#00ACC1" />
-              </TouchableOpacity>
-              
-              <Text style={styles.monthTitle}>
-                {MONTHS[hijriMonth - 1]} {hijriYear}
-              </Text>
-              
-              <TouchableOpacity 
-                style={styles.monthChangeButton}
-                onPress={() => changeMonth(1)}
-              >
-                <Ionicons name="chevron-forward" size={24} color="#00ACC1" />
-              </TouchableOpacity>
-            </View>
-            
-            {/* Weekday Header */}
-            <View style={styles.weekdaysContainer}>
-              {WEEKDAYS.map((day, index) => (
-                <View key={index} style={styles.weekdayContainer}>
-                  <Text style={[
-                    styles.weekdayText,
-                    index === 5 && styles.fridayText, // Friday
-                    index === 6 && styles.saturdayText // Saturday
-                  ]}>
-                    {day}
-                  </Text>
-                </View>
-              ))}
-            </View>
-            
-            {/* Calendar Grid */}
-            <FlatList
-              data={calendarDays}
-              renderItem={renderDay}
-              keyExtractor={(item, index) => 
-                item.isEmpty ? item.id : `day-${item.date}-${index}`
-              }
-              numColumns={7}
-              scrollEnabled={false}
-              style={styles.calendarGrid}
-            />
-            
-            {/* Special Events */}
-            <View style={styles.eventsContainer}>
-              <Text style={styles.eventsTitle}>
-                Special Events in {MONTHS[hijriMonth - 1]}
-              </Text>
-              
-              {currentMonthEvents.length > 0 ? (
-                currentMonthEvents.map((event, index) => (
-                  <View key={index} style={styles.eventItem}>
-                    <View style={styles.eventDateContainer}>
-                      <Text style={styles.eventDateText}>{event.day}</Text>
-                    </View>
-                    <View style={styles.eventDetails}>
-                      <Text style={styles.eventName}>{event.name}</Text>
-                      <Text style={styles.eventDescription}>{event.description}</Text>
-                    </View>
-                  </View>
-                ))
-              ) : (
-                <Text style={styles.noEventsText}>
-                  No special events this month
-                </Text>
-              )}
-            </View>
-          </View>
-        )}
+
+      <ScrollView style={styles.scrollView}>
+        <IslamicCalendar onEventPress={handleEventPress} />
       </ScrollView>
+      
+      {/* Event Details Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {selectedEvent?.name || 'Event Details'}
+              </Text>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setModalVisible(false)}
+              >
+                <Ionicons name="close" size={24} color="#718096" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.modalBody}>
+              <View style={styles.eventDateContainer}>
+                <Ionicons name="calendar-outline" size={20} color="#00ACC1" style={styles.eventIcon} />
+                <Text style={styles.eventDate}>
+                  {selectedEvent?.day} {getMonthName(selectedEvent?.month)} 
+                  {selectedEvent?.year ? ` ${selectedEvent?.year} H` : ''}
+                </Text>
+              </View>
+              
+              <Text style={styles.eventDescription}>
+                {getEventDescription(selectedEvent?.name)}
+              </Text>
+              
+              {/* Depending on the event, you might want to add specific content */}
+              {selectedEvent?.name === 'Ramadan' && (
+                <View style={styles.additionalContent}>
+                  <Text style={styles.additionalContentTitle}>Ramadan Activities</Text>
+                  <View style={styles.activityItem}>
+                    <Ionicons name="book-outline" size={18} color="#43A047" style={styles.activityIcon} />
+                    <Text style={styles.activityText}>Quran Reading Plan</Text>
+                  </View>
+                  <View style={styles.activityItem}>
+                    <Ionicons name="time-outline" size={18} color="#43A047" style={styles.activityIcon} />
+                    <Text style={styles.activityText}>Iftar & Suhoor Times</Text>
+                  </View>
+                  <View style={styles.activityItem}>
+                    <Ionicons name="heart-outline" size={18} color="#43A047" style={styles.activityIcon} />
+                    <Text style={styles.activityText}>Charity Opportunities</Text>
+                  </View>
+                </View>
+              )}
+              
+              <TouchableOpacity 
+                style={styles.primaryButton}
+                onPress={() => {
+                  setModalVisible(false);
+                  // Here you could navigate to a detailed screen for this event
+                }}
+              >
+                <Text style={styles.primaryButtonText}>Learn More</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
+};
+
+// Helper function to get Hijri month name
+const getMonthName = (monthNumber) => {
+  if (!monthNumber) return '';
+  
+  const months = [
+    'Muharram', 'Safar', 'Rabi al-Awwal', 'Rabi al-Thani',
+    'Jumada al-Awwal', 'Jumada al-Thani', 'Rajab', 'Sha\'ban',
+    'Ramadan', 'Shawwal', 'Dhu al-Qi\'dah', 'Dhu al-Hijjah'
+  ];
+  
+  return months[monthNumber - 1] || '';
 };
 
 const styles = StyleSheet.create({
@@ -277,12 +135,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F7FA',
   },
   header: {
-    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
     paddingVertical: 12,
-    paddingHorizontal: 16,
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
-    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,
@@ -291,188 +150,91 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 50,
-  },
-  loadingText: {
-    marginTop: 10,
-    color: '#2C3E50',
-    fontSize: 16,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 50,
-  },
-  errorText: {
-    marginTop: 10,
-    marginBottom: 20,
-    color: '#2C3E50',
-    fontSize: 16,
-    textAlign: 'center',
-    paddingHorizontal: 20,
-  },
-  retryButton: {
-    backgroundColor: '#00ACC1',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-  },
-  calendarContainer: {
     padding: 16,
   },
-  monthHeader: {
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    minHeight: '60%',
+    maxHeight: '80%',
+  },
+  modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
   },
-  monthChangeButton: {
-    padding: 8,
-  },
-  monthTitle: {
+  modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#2C3E50',
   },
-  weekdaysContainer: {
-    flexDirection: 'row',
-    marginBottom: 8,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-    paddingVertical: 12,
-  },
-  weekdayContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  weekdayText: {
-    color: '#2C3E50',
-    fontWeight: '500',
-  },
-  fridayText: {
-    color: '#43A047', // Green for Friday
-    fontWeight: 'bold',
-  },
-  saturdayText: {
-    color: '#00ACC1', // Primary color for Saturday
-  },
-  calendarGrid: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+  closeButton: {
     padding: 8,
   },
-  emptyDay: {
-    flex: 1,
-    aspectRatio: 1,
-    margin: 4,
-  },
-  dayContainer: {
-    flex: 1,
-    aspectRatio: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    margin: 4,
-    borderRadius: 8,
-  },
-  todayContainer: {
-    backgroundColor: '#00ACC1',
-  },
-  eventDayContainer: {
-    backgroundColor: '#F0F9FA',
-  },
-  dayText: {
-    fontSize: 16,
-    color: '#2C3E50',
-  },
-  todayText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-  },
-  eventDayText: {
-    color: '#00ACC1',
-    fontWeight: 'bold',
-  },
-  eventIndicator: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#00ACC1',
-    marginTop: 2,
-  },
-  eventsContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+  modalBody: {
     padding: 16,
-    marginTop: 16,
-  },
-  eventsTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    marginBottom: 16,
-  },
-  eventItem: {
-    flexDirection: 'row',
-    marginBottom: 16,
-    alignItems: 'center',
   },
   eventDateContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#00ACC1',
-    justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 12,
+    marginBottom: 16,
   },
-  eventDateText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
+  eventIcon: {
+    marginRight: 8,
   },
-  eventDetails: {
-    flex: 1,
+  eventDate: {
+    fontSize: 16,
+    color: '#718096',
   },
-  eventName: {
+  eventDescription: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#2C3E50',
+    marginBottom: 24,
+  },
+  additionalContent: {
+    marginBottom: 24,
+    padding: 16,
+    backgroundColor: '#F0F9FA',
+    borderRadius: 8,
+  },
+  additionalContentTitle: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#2C3E50',
-    marginBottom: 4,
+    marginBottom: 12,
   },
-  eventDescription: {
-    fontSize: 14,
-    color: '#718096',
+  activityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
   },
-  noEventsText: {
+  activityIcon: {
+    marginRight: 8,
+  },
+  activityText: {
     fontSize: 14,
-    color: '#718096',
-    fontStyle: 'italic',
-    textAlign: 'center',
-    paddingVertical: 20,
+    color: '#2C3E50',
+  },
+  primaryButton: {
+    backgroundColor: '#00ACC1',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  primaryButtonText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });
 

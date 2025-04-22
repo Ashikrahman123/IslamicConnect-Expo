@@ -21,7 +21,6 @@ const HomeScreen = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [hijriDate, setHijriDate] = useState(null);
-  const [prayerTimes, setPrayerTimes] = useState(null);
   const [featuredAudio, setFeaturedAudio] = useState([]);
   const [error, setError] = useState(null);
 
@@ -107,40 +106,12 @@ const HomeScreen = ({ navigation }) => {
           </View>
         ) : (
           <>
-            {/* Prayer Times Card */}
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.cardTitle}>Prayer Times</Text>
-                <TouchableOpacity onPress={() => navigation.navigate('PrayerTimes')}>
-                  <Text style={styles.seeAllText}>See All</Text>
-                </TouchableOpacity>
-              </View>
-              
-              {prayerTimes && (
-                <View style={styles.prayerTimesContainer}>
-                  <View style={styles.prayerTime}>
-                    <Text style={styles.prayerName}>Fajr</Text>
-                    <Text style={styles.prayerTimeText}>{prayerTimes.timings.fajr}</Text>
-                  </View>
-                  <View style={styles.prayerTime}>
-                    <Text style={styles.prayerName}>Dhuhr</Text>
-                    <Text style={styles.prayerTimeText}>{prayerTimes.timings.dhuhr}</Text>
-                  </View>
-                  <View style={styles.prayerTime}>
-                    <Text style={styles.prayerName}>Asr</Text>
-                    <Text style={styles.prayerTimeText}>{prayerTimes.timings.asr}</Text>
-                  </View>
-                  <View style={styles.prayerTime}>
-                    <Text style={styles.prayerName}>Maghrib</Text>
-                    <Text style={styles.prayerTimeText}>{prayerTimes.timings.maghrib}</Text>
-                  </View>
-                  <View style={styles.prayerTime}>
-                    <Text style={styles.prayerName}>Isha</Text>
-                    <Text style={styles.prayerTimeText}>{prayerTimes.timings.isha}</Text>
-                  </View>
-                </View>
-              )}
-            </View>
+            {/* Prayer Times Widget */}
+            <PrayerTimesWidget 
+              onPress={() => navigation.navigate('PrayerTimes')}
+              location={{ latitude: 37.7749, longitude: -122.4194 }} // Default to San Francisco
+              refreshTrigger={refreshing} // Will refresh when the user pulls down
+            />
             
             {/* Navigation Tiles */}
             <View style={styles.tilesContainer}>
@@ -192,7 +163,7 @@ const HomeScreen = ({ navigation }) => {
                     <TouchableOpacity 
                       key={index}
                       style={styles.audioItem}
-                      onPress={() => navigation.navigate('AudioDetails', { audioId: audio.id })}
+                      onPress={() => navigation.navigate('AudioDetail', { audioId: audio.id })}
                     >
                       <Image 
                         source={{ uri: audio.thumbnail || 'https://via.placeholder.com/60' }} 
