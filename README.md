@@ -47,4 +47,4 @@ Contributions are welcome — please fork the repo, create a feature branch, and
 MIT License
 
 ## Contact
-For questions or suggestions, contact: Ashikrahman123 (your_email@example.com)
+For questions or suggestions, contact: Ashikrahman123 (ashikr142@gmail.com)
